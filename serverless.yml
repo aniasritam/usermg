@@ -1,0 +1,35 @@
+service: user-management
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: us-east-1
+  endpoint: http://localhost:4566 # LocalStack endpoint
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Scan
+        - dynamodb:Query
+      Resource: "arn:aws:dynamodb:us-east-1:000000000000:table/Users" # Replace with your table name
+
+functions:
+  api:
+    handler: app.main.handler # Ensure your FastAPI app has a handler method
+    events:
+      - http:
+          path: users
+          method: post
+      - http:
+          path: users/{userId}
+          method: get
+      - http:
+          path: users/{userId}
+          method: put
+      - http:
+          path: users/{userId}
+          method: delete
+# No resources section needed since the table is pre-created
