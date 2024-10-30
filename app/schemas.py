@@ -1,8 +1,10 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
 
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
+    
     role: str
     number: str
 
@@ -12,3 +14,4 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: str
     number: str
+

@@ -5,7 +5,7 @@ from app.services import UserService
 
 app = FastAPI()
 
-@app.post("/users/", response_model=UserResponse)
+@app.post("/users", response_model=UserResponse)
 def create_user(user_create: UserCreate):
     user = User(id=user_create.email, **user_create.dict())  # Use email as a unique id
     return UserService.create_user(user)
