@@ -1,3 +1,4 @@
+Open readme file and select code to see clear steps
 Steps to setup this repo :
 Install docker 
 Install LocalStack from https://docs.localstack.cloud/getting-started/installation/ , unzip the file and run the exe file in powershell
