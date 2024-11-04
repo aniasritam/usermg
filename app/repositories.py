@@ -1,4 +1,5 @@
 import boto3
+from fastapi import HTTPException
 from botocore.exceptions import ClientError
 from app.settings import settings
 from app.models import User, UserUpdate
@@ -8,7 +9,6 @@ from pydantic import ValidationError, BaseModel, Field
 dynamodb = boto3.resource(
     "dynamodb",
     endpoint_url=settings.DYNAMODB_ENDPOINT,
-    region_name="us-east-1",
 )
 
 table = dynamodb.Table(settings.TABLE_NAME)
@@ -17,7 +17,7 @@ table = dynamodb.Table(settings.TABLE_NAME)
 class UserRepository:
     
     @staticmethod
-    def create_user(user: User) -> User:
+    def create_user(user: User):
       try:
           # Check if required fields are missing using Pydantic validation
           
@@ -31,24 +31,30 @@ class UserRepository:
                 Key={"email": user.email}  # Assuming email is the unique key
             ).get('Item')
           if existing_user:
-              raise ValueError("User with this email already exists")
+              raise HTTPException(status_code=400, detail="User with this email already exists")
+
               
           # Assign a unique ID if validation passes
-          user.id = str(uuid4())
+          user_id = str(uuid4())
+          user_data['id'] = user_id
           
           # Attempt to save the user to DynamoDB
           table.put_item(Item=user.dict())
+        #   print(f"User {user.id} created successfully")
           
-          return user
+          return user_data
       
       except ValidationError as ve:
-          print(f"Validation Error: {ve}")
+        
           raise ValueError("User data validation failed: Missing required fields") from ve
 
       except ValueError as ve:
           # Specific handling for user already existing
-          print(f"User Creation Error: {ve}")
+        #   print(f"User Creation Error: {ve}")
           raise ve
+      except HTTPException as he:
+        # Specific handling for HTTP exceptions
+        raise he 
       
       except ClientError as ce:
           # Catching DynamoDB ClientError (network issues, authorization, etc.)
@@ -61,13 +67,14 @@ class UserRepository:
           raise RuntimeError("An unexpected error occurred") from e
 
     @staticmethod
-    def get_user(user_id: str) -> UserUpdate:
-        response = table.get_item(Key={"id": user_id})
+    def get_user(email: str):
+        response = table.get_item(Key={"email": email})
         print(response)
         user = response.get("Item")
         if not user:
+        
             raise Exception("User not found")
-        return UserUpdate(**user)
+        return user
 
     # @staticmethod
     # def update_user(user_id: str, user: UserUpdate) -> UserUpdate:
@@ -95,20 +102,26 @@ class UserRepository:
 
 
     @staticmethod
-    def update_user(user_id: str, user: UserUpdate) -> UserUpdate:
+    def update_user(email: str, user: UserUpdate) -> UserUpdate:
       try:
+        existing_user_response = table.get_item(Key={"email": email})
+        existing_user = existing_user_response.get("Item")
+            
+        if not existing_user:
+            raise ValueError("User not found")  # More specific exception
+        
         response = table.update_item(
-        Key={"id": id},
-        UpdateExpression="SET #name = :name, #email = :email, #role = :role, #number = :number",
+        Key={"email": email},
+        UpdateExpression="SET #name = :name, #role = :role, #number = :number",
         ExpressionAttributeNames={
         "#name": "name",
-        "#email": "email",
+        
         "#role": "role",
         "#number": "number"
         },
         ExpressionAttributeValues={
                     ":name": user.name,
-                    ":email": user.email,
+                
                     ":role": user.role,
                     ":number": user.number,
                 },
@@ -120,7 +133,7 @@ class UserRepository:
         if not updated_user:
           raise ValueError("User not found")  # More specific exception
 
-        return User(**updated_user)
+        return UserUpdate(**updated_user)
 
       except ValueError as ve:
           # Specific handling for user not found
@@ -129,7 +142,7 @@ class UserRepository:
       
       except ValidationError as ve:
           # Handle validation errors for UserUpdate input
-          print(f"Validation Error: {ve}")
+        #   print(f"Validation Error: {ve}")
           raise ValueError("User data validation failed") from ve
 
       except ClientError as ce:
@@ -149,9 +162,16 @@ class UserRepository:
     #     if response.get("ResponseMetadata", {}).get("HTTPStatusCode") != 200:
     #         raise Exception("User not found")
     @staticmethod
-    def delete_user(user_id: str):
+    def delete_user(email: str):
         try:
-            response = table.delete_item(Key={"id": user_id})
+            existing_user_response = table.get_item(Key={"email": email})
+            existing_user = existing_user_response.get("Item")
+            
+            if not existing_user:
+               raise ValueError("User not found")  # More specific exception
+            
+
+            response = table.delete_item(Key={"email": email})
 
             # Check if the deletion was successful
             if response.get("ResponseMetadata", {}).get("HTTPStatusCode") != 200:

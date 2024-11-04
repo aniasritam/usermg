@@ -14,7 +14,7 @@ provider:
         - dynamodb:DeleteItem
         - dynamodb:Scan
         - dynamodb:Query
-      Resource: "arn:aws:dynamodb:us-east-1:000000000000:table/Users" # Replace with your table name
+      Resource: "arn:aws:dynamodb:us-east-1:000000000000:table/User" # Replace with your table name
 
 functions:
   api:
@@ -24,12 +24,34 @@ functions:
           path: users
           method: post
       - http:
-          path: users/{userId}
+          path: users/{email}
           method: get
       - http:
-          path: users/{userId}
+          path: users/{email}
           method: put
       - http:
-          path: users/{userId}
+          path: users/{email}
           method: delete
 # No resources section needed since the table is pre-created
+
+custom:
+  pythonRequirements:
+    requirementsFile: requirements.txt
+    noDeploy:
+      - docutils
+      - jmespath
+      - pip
+      - python-dateutil
+      - setuptools
+      - six
+      - tensorboard
+
+plugins:
+  - serverless-python-requirements
+  - serverless-dotenv-plugin
+
+package:
+  exclude:
+    - node_modules/**
+    - venv/**
+    - bk/**
