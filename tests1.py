@@ -115,10 +115,10 @@ async def test_update_user_invalid_email(sample_user_data):
     async with AsyncClient(app=main.app, base_url="http://test") as ac:
         # First, create the user
         response = await ac.post("/users", json=sample_user_data)
-        user_id = response.json()["id"]
+        email = response.json()["email"]
         # Attempt to update with invalid email format
         update_data = {"email": "invalid-email"}
-        response = await ac.put(f"/users/{user_id}", json=update_data)
+        response = await ac.put(f"/users/{email}", json=update_data)
     assert response.status_code == 422
    
 
